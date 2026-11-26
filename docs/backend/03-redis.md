@@ -1,62 +1,62 @@
-# Redis: sessão e carrinho
+# Redis: Session and Cart
 
-## Papel no sistema
+## Role in the system
 
-O Redis guarda **somente sessões e carrinhos**.
+Redis stores **only sessions and carts**.
 
-- Ele é o único lugar onde esses dois dados existem. Não é uma cópia do PostgreSQL.
-- Ele não é cache de catálogo. Os dados de produto são lidos do MongoDB.
-- Ele não participa da outbox nem da reconstrução das views.
-- Só a API acessa o Redis.
+- It is the only place where these two kinds of data exist. It is not a copy of PostgreSQL.
+- It is not a catalog cache. Product data is read from MongoDB.
+- It takes no part in the outbox or in rebuilding the views.
+- Only the API accesses Redis.
 
-## Chaves
+## Keys
 
-| Chave | Tipo | Conteúdo | Validade |
+| Key | Type | Content | Expiration |
 |---|---|---|---|
-| `session:{sessionId}` | hash | `userId`, `fullName`, `role` | 24 horas a partir do login, sem renovação |
-| `cart:{userId}` | hash | campo `productId`, valor `quantity` | 7 dias a partir da última operação de escrita |
+| `session:{sessionId}` | hash | `userId`, `fullName`, `role` | 24 hours from login, no renewal |
+| `cart:{userId}` | hash | field `productId`, value `quantity` | 7 days from the last write operation |
 
-`userId` e `productId` são os UUIDs do PostgreSQL. No Redis, todos os valores dos hashes são armazenados como texto.
+`userId` and `productId` are the PostgreSQL UUIDs. In Redis, all hash values are stored as text.
 
-## Sessão
+## Session
 
-### Identificador
+### Identifier
 
-O `sessionId` funciona como uma credencial. Gere **32 bytes aleatórios** com um gerador criptográfico e codifique em `base64url`. No Node.js: `crypto.randomBytes(32).toString('base64url')`.
+The `sessionId` works as a credential. Generate **32 random bytes** with a cryptographic generator and encode them in `base64url`. In Node.js: `crypto.randomBytes(32).toString('base64url')`.
 
-Não registre o `sessionId` em logs.
+Do not log the `sessionId`.
 
-### Campos
+### Fields
 
-| Campo | Exemplo | Uso |
+| Field | Example | Use |
 |---|---|---|
-| `userId` | `7f1c2a9e-4b3d-4c8a-9f21-6d5e8b0a1c34` | identificar o usuário em toda operação |
-| `fullName` | `Maria Souza` | resposta de `GET /auth/me` |
-| `role` | `user` ou `admin` | autorização |
+| `userId` | `7f1c2a9e-4b3d-4c8a-9f21-6d5e8b0a1c34` | identify the user in every operation |
+| `fullName` | `Maria Souza` | `GET /auth/me` response |
+| `role` | `user` or `admin` | authorization |
 
-E-mail, senha e hash de senha não são gravados.
+E-mail, password and password hash are not stored.
 
-`fullName` e `role` são cópias feitas no login. Se no futuro for possível alterar o papel ou remover um usuário, será necessário encerrar as sessões dele. Isso exigirá um índice de sessões por usuário, que não existe nesta versão.
+`fullName` and `role` are copies taken at login. If it ever becomes possible to change a user's role or remove a user, their sessions will have to be terminated. That will require an index of sessions per user, which does not exist in this version.
 
 ### Cookie
 
-| Atributo | Valor |
+| Attribute | Value |
 |---|---|
-| Nome | `sid` |
-| Conteúdo | somente o `sessionId` |
-| `HttpOnly` | sim |
-| `Secure` | sim; pode ser desligado apenas no ambiente local sem HTTPS |
+| Name | `sid` |
+| Content | only the `sessionId` |
+| `HttpOnly` | yes |
+| `Secure` | yes; may be turned off only in the local environment without HTTPS |
 | `SameSite` | `Lax` |
 | `Path` | `/` |
 | `Max-Age` | `86400` |
 
-- O front envia as requisições com `credentials: 'include'`. No CORS, a API informa a origem exata do front (não use `*`) e `Access-Control-Allow-Credentials: true`.
-- Nas operações de escrita, a API recusa um cabeçalho `Origin` diferente do esperado. Requisições sem `Origin`, como as do script de migração, são aceitas e continuam exigindo a autenticação de cada rota.
-- `SameSite=Lax` pressupõe front e API no mesmo *site*. Se forem publicados em sites diferentes, o cookie precisa ser revisto.
+- The front end sends requests with `credentials: 'include'`. For CORS, the API returns the exact front-end origin (do not use `*`) and `Access-Control-Allow-Credentials: true`.
+- On write operations, the API rejects an `Origin` header different from the expected one. Requests without `Origin`, such as those from the migration script, are accepted and still require each route's authentication.
+- `SameSite=Lax` assumes the front end and the API are on the same *site*. If they are deployed on different sites, the cookie must be revisited.
 
-### Operações
+### Operations
 
-**Criar** (login e cadastro). Os dois comandos vão na mesma transação para a chave nunca ficar sem validade.
+**Create** (login and registration). Both commands go in the same transaction so the key is never left without an expiration.
 
 ```redis
 MULTI
@@ -65,32 +65,32 @@ EXPIRE session:{sessionId} 86400
 EXEC
 ```
 
-- Gere sempre um `sessionId` novo. Nunca reaproveite um valor recebido do navegador.
-- Se a requisição já trouxer um cookie de sessão, apague a sessão anterior.
-- No cadastro, grave primeiro o usuário no PostgreSQL e depois crie a sessão. Se o Redis falhar, a conta continua criada e o usuário precisa fazer login.
-- O mesmo usuário pode ter várias sessões, uma por navegador.
+- Always generate a new `sessionId`. Never reuse a value received from the browser.
+- If the request already carries a session cookie, delete the previous session.
+- On registration, first store the user in PostgreSQL and then create the session. If Redis fails, the account remains created and the user must log in.
+- The same user may have several sessions, one per browser.
 
-**Validar** (rotas que exigem sessão):
+**Validate** (routes that require a session):
 
 ```redis
 HGETALL session:{sessionId}
 ```
 
-Sem cookie ou com resultado vazio, responda `401 UNAUTHENTICATED`. Não altere o hash depois de criado: um `HSET` após a expiração recriaria a chave **sem validade**.
+With no cookie or an empty result, respond `401 UNAUTHENTICATED`. Do not change the hash after it is created: an `HSET` after expiration would recreate the key **without an expiration**.
 
-**Encerrar** (logout):
+**End** (logout):
 
 ```redis
 DEL session:{sessionId}
 ```
 
-A API também expira o cookie. O carrinho é mantido.
+The API also expires the cookie. The cart is kept.
 
-## Carrinho
+## Cart
 
-Só usuários autenticados têm carrinho. O `userId` vem **sempre da sessão**, nunca do corpo ou da URL.
+Only authenticated users have a cart. The `userId` **always comes from the session**, never from the body or the URL.
 
-### Estrutura
+### Structure
 
 ```redis
 HGETALL cart:7f1c2a9e-4b3d-4c8a-9f21-6d5e8b0a1c34
@@ -100,43 +100,43 @@ HGETALL cart:7f1c2a9e-4b3d-4c8a-9f21-6d5e8b0a1c34
 4) "1"
 ```
 
-- A quantidade é um inteiro maior que zero.
-- Nome, preço, imagem, desconto e totais **não** são gravados.
-- Carrinho vazio é chave inexistente: o Redis remove o hash quando o último campo é apagado.
-- Ler o carrinho não renova a validade.
+- The quantity is an integer greater than zero.
+- Name, price, image, discount and totals are **not** stored.
+- An empty cart is a missing key: Redis removes the hash when its last field is deleted.
+- Reading the cart does not renew its expiration.
 
-### Adicionar: `POST /cart/items`
+### Add: `POST /cart/items`
 
-A quantidade enviada é **somada** à que já está no carrinho.
+The quantity sent is **added** to the quantity already in the cart.
 
-1. Validar que a quantidade é um inteiro maior que zero.
-2. Buscar o produto no MongoDB. Se não existir ou estiver inativo, responder `404 PRODUCT_NOT_FOUND`.
-3. Executar o script, informando o estoque lido. A conferência e a gravação ficam em uma única operação.
+1. Validate that the quantity is an integer greater than zero.
+2. Look up the product in MongoDB. If it does not exist or is inactive, respond `404 PRODUCT_NOT_FOUND`.
+3. Run the script, passing the stock that was read. The check and the write happen in a single operation.
 
 ```lua
 -- cart-add
 -- KEYS[1] = cart:{userId}
--- ARGV = productId, quantidade, estoque, validade em segundos
-local atual = tonumber(redis.call('HGET', KEYS[1], ARGV[1]) or '0')
-local nova = atual + tonumber(ARGV[2])
-if nova > tonumber(ARGV[3]) then
+-- ARGV = productId, quantity, stock, expiration in seconds
+local current = tonumber(redis.call('HGET', KEYS[1], ARGV[1]) or '0')
+local updated = current + tonumber(ARGV[2])
+if updated > tonumber(ARGV[3]) then
   return -1
 end
-redis.call('HSET', KEYS[1], ARGV[1], nova)
+redis.call('HSET', KEYS[1], ARGV[1], updated)
 redis.call('EXPIRE', KEYS[1], ARGV[4])
-return nova
+return updated
 ```
 
-Retorno `-1`: responder `409 INSUFFICIENT_STOCK`. A validade é `604800`.
+Return `-1`: respond `409 INSUFFICIENT_STOCK`. The expiration is `604800`.
 
-### Alterar quantidade: `PUT /cart/items/:productId`
+### Change quantity: `PUT /cart/items/:productId`
 
-A quantidade enviada **substitui** a atual. Antes do script, validar que é um inteiro maior que zero, que o produto está ativo e que não passa do estoque. Para remover, use `DELETE`.
+The quantity sent **replaces** the current one. Before the script, validate that it is an integer greater than zero, that the product is active and that it does not exceed the stock. To remove an item, use `DELETE`.
 
 ```lua
 -- cart-set
 -- KEYS[1] = cart:{userId}
--- ARGV = productId, quantidade, validade em segundos
+-- ARGV = productId, quantity, expiration in seconds
 if redis.call('HEXISTS', KEYS[1], ARGV[1]) == 0 then
   return 0
 end
@@ -145,9 +145,9 @@ redis.call('EXPIRE', KEYS[1], ARGV[3])
 return 1
 ```
 
-Retorno `0`: o item não está no carrinho; responder `404 CART_ITEM_NOT_FOUND`. Assim, uma alteração atrasada não recria um item já removido.
+Return `0`: the item is not in the cart; respond `404 CART_ITEM_NOT_FOUND`. This way, a delayed change does not recreate an item that was already removed.
 
-### Remover: `DELETE /cart/items/:productId`
+### Remove: `DELETE /cart/items/:productId`
 
 ```redis
 MULTI
@@ -156,105 +156,105 @@ EXPIRE cart:{userId} 604800
 EXEC
 ```
 
-Remover um item ausente não é erro. Se o carrinho ficar vazio, o `EXPIRE` não tem efeito.
+Removing a missing item is not an error. If the cart becomes empty, `EXPIRE` has no effect.
 
-### Ler: `GET /cart`
+### Read: `GET /cart`
 
 1. `HGETALL cart:{userId}`.
-2. Buscar todos os produtos no MongoDB em uma única consulta por `_id`.
-3. Montar cada item com `productId`, `title`, `thumbnail`, `price`, `quantity` e `stock`.
-4. Calcular `totalQuantity` (soma das quantidades) e `total` (soma de `price × quantity`, a preço cheio) com aritmética decimal.
+2. Fetch all products from MongoDB in a single query by `_id`.
+3. Build each item with `productId`, `title`, `thumbnail`, `price`, `quantity` and `stock`.
+4. Compute `totalQuantity` (sum of quantities) and `total` (sum of `price × quantity`, at full price) using decimal arithmetic.
 
-O Redis não garante a ordem dos campos do hash. A API ordena os itens por `title` e `productId`; itens sem produto encontrado vão para o final.
+Redis does not guarantee the order of hash fields. The API sorts items by `title` and `productId`; items whose product was not found go last.
 
-O contador do cabeçalho é o `totalQuantity` desta resposta. Não há uma rota só para ele.
+The header counter is the `totalQuantity` of this response. There is no separate route for it.
 
-O carrinho pode conter um item que deixou de estar disponível. Nesse caso, o item é devolvido com o campo `issue`:
+The cart may contain an item that is no longer available. In that case, the item is returned with the `issue` field:
 
-| Situação | `issue` | Entra no `total` |
+| Situation | `issue` | Counted in `total` |
 |---|---|---|
-| Produto inativo ou não encontrado no MongoDB | `PRODUCT_UNAVAILABLE` | não |
-| Quantidade maior que o estoque | `INSUFFICIENT_STOCK` | sim |
+| Product inactive or not found in MongoDB | `PRODUCT_UNAVAILABLE` | no |
+| Quantity greater than stock | `INSUFFICIENT_STOCK` | yes |
 
-- Com qualquer `issue`, o front impede o checkout até o usuário ajustar o carrinho.
-- Um item sem produto encontrado vem apenas com `productId`, `quantity` e `issue`. Ele continua contando em `totalQuantity` e pode ser removido.
-- **A leitura nunca apaga itens.** Durante uma reconstrução do MongoDB, um produto pode estar temporariamente ausente.
-- Se o MongoDB estiver fora do ar, responda com erro, sem alterar o carrinho.
+- With any `issue`, the front end blocks checkout until the user adjusts the cart.
+- An item whose product was not found comes with only `productId`, `quantity` and `issue`. It still counts in `totalQuantity` and can be removed.
+- **Reading never deletes items.** During a MongoDB rebuild, a product may be temporarily missing.
+- If MongoDB is down, respond with an error, without changing the cart.
 
-O estoque do MongoDB pode estar atrasado. A validação do carrinho serve para orientar o usuário; a **validação definitiva é a do checkout, no PostgreSQL**.
+MongoDB stock may lag behind. Cart validation serves to guide the user; the **definitive validation happens at checkout, in PostgreSQL**.
 
 ## Checkout: `POST /orders`
 
-O front gera um UUID `idempotencyKey` ao abrir o checkout e reenvia o mesmo valor nas novas tentativas. A chave é guardada no PostgreSQL, não no Redis.
+The front end generates an `idempotencyKey` UUID when it opens checkout and resends the same value on retries. The key is stored in PostgreSQL, not in Redis.
 
-1. Validar a sessão.
-2. Procurar no PostgreSQL um pedido com o mesmo usuário e `idempotencyKey`. Se existir, limpar o carrinho com os itens dele (passo 5) e devolver esse pedido.
-3. Ler o carrinho. Se estiver vazio, responder `409 CART_EMPTY`.
-4. Em uma transação no PostgreSQL, validar e baixar o estoque, usar os preços do PostgreSQL e gravar pedido, itens e outbox. Se a transação falhar **por qualquer motivo**, repetir a busca do passo 2 antes de responder com erro.
-5. Após o commit, remover do carrinho os itens comprados.
+1. Validate the session.
+2. Look in PostgreSQL for an order with the same user and `idempotencyKey`. If it exists, clean up the cart with its items (step 5) and return that order.
+3. Read the cart. If it is empty, respond `409 CART_EMPTY`.
+4. In a PostgreSQL transaction, validate and decrease stock, use the PostgreSQL prices and store the order with status `CONFIRMED`, its items and the `OrderPlaced` event in the outbox. If the transaction fails **for any reason**, repeat the lookup from step 2 before responding with an error.
+5. After the commit, remove the purchased items from the cart.
 
-O passo 2 vem antes da leitura porque, em uma nova tentativa, o carrinho pode já estar vazio. A nova busca no passo 4 cobre duas requisições simultâneas com a mesma chave: a segunda pode falhar por chave duplicada ou por falta de estoque, embora o pedido já exista.
+Step 2 comes before reading the cart because, on a retry, the cart may already be empty. The new lookup in step 4 covers two simultaneous requests with the same key: the second may fail due to a duplicate key or insufficient stock, even though the order already exists.
 
-### Limpeza do carrinho
+### Cart cleanup
 
-O script remove um item **somente se a quantidade ainda for igual à comprada**. Itens adicionados ou alterados durante o processamento são mantidos.
+The script removes an item **only if its quantity is still equal to the purchased quantity**. Items added or changed during processing are kept.
 
 ```lua
 -- cart-checkout-cleanup
 -- KEYS[1] = cart:{userId}
--- ARGV = pares productId, quantidade comprada
-local removidos = 0
+-- ARGV = pairs of productId, purchased quantity
+local removed = 0
 for i = 1, #ARGV, 2 do
   if redis.call('HGET', KEYS[1], ARGV[i]) == ARGV[i + 1] then
-    removidos = removidos + redis.call('HDEL', KEYS[1], ARGV[i])
+    removed = removed + redis.call('HDEL', KEYS[1], ARGV[i])
   end
 end
-return removidos
+return removed
 ```
 
-- Se um item teve a quantidade alterada durante a compra, ele permanece com a nova quantidade inteira.
-- A limpeza não renova a validade.
-- Se a limpeza falhar, o pedido **continua válido**: registre o erro e responda com sucesso. Os itens podem permanecer no carrinho.
-- Repetir o script logo em seguida não remove nada a mais. A exceção é o usuário ter adicionado de novo o mesmo produto, na mesma quantidade, entre as duas execuções.
+- If an item's quantity changed during the purchase, it remains with the full new quantity.
+- Cleanup does not renew the expiration.
+- If cleanup fails, the order **remains valid**: log the error and respond with success. The items may remain in the cart.
+- Running the script again right away removes nothing more. The exception is when the user added the same product again, in the same quantity, between the two runs.
 
-## Falhas
+## Failures
 
-| Situação | Efeito esperado |
+| Situation | Expected effect |
 |---|---|
-| Redis fora do ar | login, cadastro, carrinho e rotas com sessão respondem `503`; o catálogo público continua, sem consultar a sessão |
-| Dados do Redis perdidos | usuários fazem login novamente e os carrinhos se perdem; pedidos não são afetados |
-| Memória esgotada com `noeviction` | escritas que precisam de memória retornam erro; chaves não são descartadas para abrir espaço |
+| Redis down | login, registration, cart and session routes respond `503`; the public catalog keeps working, without checking the session |
+| Redis data lost | users log in again and carts are lost; orders are not affected |
+| Memory exhausted with `noeviction` | writes that need memory return an error; keys are not evicted to free space |
 
-Falha de conexão não deve ser tratada como sessão inexistente (`401`) nem como carrinho vazio.
+A connection failure must not be treated as a missing session (`401`) or as an empty cart.
 
-## Configuração
+## Configuration
 
-| Opção | Valor | Motivo |
+| Option | Value | Reason |
 |---|---|---|
-| `appendonly` | `yes` | recuperar sessões e carrinhos após reiniciar |
-| `appendfsync` | `everysec` | grava em disco a cada segundo; uma queda pode perder as escritas mais recentes |
-| `maxmemory-policy` | `noeviction` | não descartar sessões ou carrinhos sem aviso; definir explicitamente, pois o padrão pode variar em serviços gerenciados |
+| `appendonly` | `yes` | recover sessions and carts after a restart |
+| `appendfsync` | `everysec` | writes to disk every second; a crash may lose the most recent writes |
+| `maxmemory-policy` | `noeviction` | do not evict sessions or carts without warning; set it explicitly, since the default may vary in managed services |
 
 ```bash
 redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction
 ```
 
-- Em contêiner, o diretório de dados precisa estar em um volume persistente.
-- Não exponha a porta do Redis publicamente. Fora do ambiente local, exija autenticação.
-- O endereço e a senha vêm de variáveis de ambiente.
+- In a container, the data directory must be on a persistent volume.
+- Do not expose the Redis port publicly. Outside the local environment, require authentication.
+- The address and password come from environment variables.
 
-A expiração continua valendo com `noeviction`: chaves vencidas são removidas normalmente.
+Expiration still applies with `noeviction`: expired keys are removed normally.
 
-## Limitações conhecidas
+## Known limitations
 
-| Situação | Consequência | Solução possível, não incluída |
+| Situation | Consequence | Possible solution, not included |
 |---|---|---|
-| Duas abas confirmam o checkout ao mesmo tempo, com chaves diferentes | podem ser criados dois pedidos, se houver estoque | trava por usuário, por exemplo `checkout:lock:{userId}` |
-| O carrinho muda depois que o usuário revisou o checkout | o pedido usa o carrinho do momento da confirmação | enviar os itens e o total esperados e recusar se houver diferença |
-| O preço muda depois da revisão | o pedido usa o preço atual do PostgreSQL | enviar o total esperado e recusar se houver diferença |
+| Two tabs confirm checkout at the same time, with different keys | two orders may be created, if there is stock | per-user lock, for example `checkout:lock:{userId}` |
+| The cart changes after the user reviewed the checkout | the order uses the cart at confirmation time | send the expected items and total and reject if they differ |
+| The price changes after the review | the order uses the current PostgreSQL price | send the expected total and reject if it differs |
 
-## Ponto de atenção: compra duplicada
+## Note: duplicate purchase
 
-Se duas abas confirmarem a compra ao mesmo tempo, com chaves de idempotência diferentes, **podem ser criados dois pedidos**, desde que haja estoque. A `idempotencyKey` só evita a repetição de requisições com a mesma chave.
+If two tabs confirm the purchase at the same time, with different idempotency keys, **two orders may be created**, as long as there is stock. The `idempotencyKey` only prevents repeated requests with the same key.
 
-Uma trava por usuário no Redis evitaria essa situação. Ela **não faz parte do desenho atual** e fica registrada para avaliação, caso o protótipo precise de proteção contra compra duplicada.
+A per-user lock in Redis would prevent this. It is **not part of the current design** and is recorded for evaluation, in case the prototype needs protection against duplicate purchases.

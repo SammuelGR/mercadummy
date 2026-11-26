@@ -1,77 +1,76 @@
-# Mercadummy: documentação do protótipo
+# Mercadummy: prototype documentation
 
-Protótipo de e-commerce com **CQRS** e três bancos de dados. Há dois papéis de usuário, `admin` e comprador (`user`). Não é um marketplace. Categorias e produtos vêm do [DummyJSON](https://github.com/Ovi/DummyJSON), e o sistema é em inglês.
+E-commerce prototype with **CQRS** and three databases. There are two user roles, `admin` and shopper (`user`). It is not a marketplace. Categories and products come from [DummyJSON](https://github.com/Ovi/DummyJSON), and the system is in English.
 
-Estes arquivos são a **especificação**. A API, o worker, o front e o script de migração ainda não foram implementados.
+These files are the **specification**. The API, the worker, the front end and the migration script have not been implemented yet. The PostgreSQL schema will be defined in `schema.prisma` and applied through Prisma migrations.
 
-## Arquivos
+## Files
 
-| Arquivo | O que propõe |
+| File | What it proposes |
 |---|---|
-| `schema.sql` | DDL executável do PostgreSQL |
-| `01-modelagem-postgres.md` | modelo de escrita: diagrama, tabelas, constraints e regras que a aplicação precisa garantir |
-| `02-extracao-dummyjson.md` | extração de categorias e produtos e mapeamento de cada parâmetro para as tabelas |
-| `03-redis.md` | sessão e carrinho: chaves, validade, cookie, scripts, checkout, falhas e configuração |
-| `04-modelagem-mongodb.md` | views de leitura: coleções, mapeamento, índices, consultas e atualização pelo worker |
-| `05-reprocessamento-mongodb.md` | instruções para reconstruir ou corrigir o MongoDB |
-| `06-contrato-api.md` | rotas da API, acessos, requisições, respostas e erros |
+| `01-postgres-model.md` | write model: diagram, tables, constraints and rules the application must enforce; basis for `schema.prisma` |
+| `02-dummyjson-extraction.md` | extraction of categories and products and the mapping of each parameter to the tables |
+| `03-redis.md` | session and cart: keys, expiration, cookie, scripts, checkout, failures and configuration |
+| `04-mongodb-model.md` | read views: collections, mapping, indexes, queries and updates by the worker |
+| `05-mongodb-reprocessing.md` | instructions for rebuilding or fixing MongoDB |
+| `06-api-contract.md` | API routes, access, requests, responses and errors |
 
-**Ordem de leitura sugerida:** `01`, `04`, `03` e `06`. Use o `02` ao criar a migração e o `05` ao reprocessar as views.
+**Suggested reading order:** `01`, `04`, `03` and `06`. Use `02` when building the migration and `05` when reprocessing the views.
 
-## Arquitetura de dados
+## Data architecture
 
 ```mermaid
 flowchart LR
-    FRONT["React SPA"] --> API["API NestJS (CQRS)"]
-    API -->|comandos| PG[("PostgreSQL<br/>fonte da verdade")]
-    API -->|sessão e carrinho| REDIS[("Redis")]
+    FRONT["React SPA"] --> API["NestJS API (CQRS)"]
+    API -->|commands| PG[("PostgreSQL<br/>source of truth")]
+    API -->|session and cart| REDIS[("Redis")]
     PG -->|outbox| WORKER["Worker"]
-    WORKER -->|projeção| MONGO[("MongoDB<br/>views de leitura")]
-    MONGO -->|consultas| API
-    DUMMY["DummyJSON"] --> SCRIPT["Script de migração"]
-    SCRIPT -->|rotas admin| API
+    WORKER -->|projection| MONGO[("MongoDB<br/>read views")]
+    MONGO -->|queries| API
+    DUMMY["DummyJSON"] --> SCRIPT["Migration script"]
+    SCRIPT -->|admin routes| API
 ```
 
-| Banco | Responsabilidade | Se os dados forem perdidos |
+| Database | Responsibility | If the data is lost |
 |---|---|---|
-| PostgreSQL | usuários, catálogo, pedidos e outbox | é a fonte da verdade; depende de backup |
-| MongoDB | views no formato das telas | pode ser reconstruído a partir do PostgreSQL |
-| Redis | sessões e carrinhos | novo login; os carrinhos se perdem |
+| PostgreSQL | users, catalog, orders and outbox | it is the source of truth; relies on backups |
+| MongoDB | views shaped like the screens | can be rebuilt from PostgreSQL |
+| Redis | sessions and carts | users log in again; carts are lost |
 
-## Principais decisões
+## Key decisions
 
-- Chaves de negócio em **UUID v4**; `order_number` é o número exibido do pedido, e `external_id` guarda o id de origem do produto.
-- O desconto é gravado como vem do DummyJSON e arredondado apenas na view.
-- O pedido **cobra o preço cheio**; o total com desconto também é gravado.
-- Atributos apenas descritivos do produto ficam em um único campo `jsonb`.
-- O worker relê o estado atual no PostgreSQL. O reprocessamento não depende do histórico de eventos.
-- A migração é feita por um script externo, **através da API**, e não altera registros existentes.
+- Business keys are **UUID v4**; `order_number` is the displayed order number, and `external_id` keeps the product's source id.
+- The discount is stored as it comes from DummyJSON and rounded only in the view.
+- The order **charges the full price**; the discounted total is also stored.
+- Purely descriptive product attributes are kept in a single `jsonb` field. DummyJSON data not used in the project, such as reviews, shipping and return policies and `meta`, is discarded during import.
+- An order is created as `CONFIRMED` at checkout and does not change afterwards; there is no order management by the administrator.
+- The worker rereads the current state in PostgreSQL. Reprocessing does not depend on the event history.
+- The migration is done by an external script, **through the API**, and does not change existing records.
 
-## O que foi verificado
+## What has been verified
 
-| Parte | Verificação | Ainda falta |
+| Part | Verification | Still missing |
 |---|---|---|
-| PostgreSQL | esquema, carga de teste de categorias e produtos, e o SQL de projeção e reprocessamento | transações da API, como o checkout |
-| Redis | scripts, validade, falta de memória e reinício normal, em um Redis 7.0.15 | queda abrupta e integração com a API |
-| MongoDB | nenhuma execução; o servidor não pôde ser obtido no ambiente de testes | gravação, consultas, índices, troca de coleções e reconstrução |
-| API e migração | os produtos do DummyJSON foram conferidos contra as regras de entrada | implementação e testes das rotas |
+| PostgreSQL | schema in SQL, a test load of categories and products, and the projection and reprocessing SQL | `schema.prisma`, migrations and API transactions, such as checkout |
+| Redis | scripts, expiration, out-of-memory and normal restart, on Redis 7.0.15 | abrupt crash and integration with the API |
+| MongoDB | no execution; the server could not be obtained in the test environment | writes, queries, indexes, collection swap and rebuild |
+| API and migration | the DummyJSON products were checked against the input rules | implementation and tests of the routes |
 
-## Pontos em aberto
+## Open points
 
-| Ponto | Situação atual |
+| Point | Current status |
 |---|---|
-| Compra duplicada em duas abas | ponto de atenção no `03`; a trava no Redis não faz parte do desenho |
-| Preço cobrado | preço cheio, como no mockup; confirmar se o desconto deve ser aplicado |
-| Primeiro `admin` | definir como criar a conta; é necessária para a migração |
-| Dados de usuários e pedidos de teste | serão criados posteriormente |
-| Tela do administrador | há rotas, mas o `screens.md` não define a tela |
-| Valores propostos | validade da sessão e do carrinho, faixas de estoque, limites das rotas e do worker |
-| Vários workers | o desenho considera um; ver a ressalva sobre exclusões no `04` |
+| Duplicate purchase in two tabs | noted in `03`; the Redis lock is not part of the design |
+| Price charged | full price, as in the mockup; confirm whether the discount should be applied |
+| First `admin` | define how to create the account; it is needed for the migration |
+| Test user and order data | will be created later |
+| Proposed values | session and cart expiration, stock ranges, route and worker limits |
+| Multiple workers | the design assumes one; see the caveat about deletions in `04` |
 
-## Ajustes nos materiais de origem
+## Adjustments to the source materials
 
-Os diagramas C4, os mockups e o `screens.md` serviram de entrada e não fazem parte deste pacote. Convém atualizar:
+The C4 diagrams, the mockups and `screens.md` served as input and are not part of this package. They should be updated:
 
-- **C4, níveis 1 e 2:** trocar o ator Anunciante pelo Administrador e rever a menção a anúncios.
-- **C4, nível 3:** o componente de sessão e carrinho precisa ler os produtos do MongoDB, direto ou por uma consulta.
-- **Mockups:** estão em português e usam dados diferentes dos do DummyJSON.
+- **C4, levels 1 and 2:** replace the Advertiser actor with the Administrator and revisit the mention of ads.
+- **C4, level 3:** the session and cart component needs to read products from MongoDB, directly or through a query.
+- **Mockups:** they are in Portuguese and use data different from DummyJSON's.
