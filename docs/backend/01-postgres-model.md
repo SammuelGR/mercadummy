@@ -1,8 +1,8 @@
 # PostgreSQL Model
 
-PostgreSQL is the write database and the source of truth. This document is the reference for the model: during implementation, the schema will be defined in `schema.prisma`, and table creation and evolution will be handled by Prisma migrations.
+PostgreSQL is the write database and the source of truth. The [Prisma schema](../../backend/prisma/schema.prisma) defines the tables, columns, and relationships documented here.
 
-Some definitions here cannot be expressed directly in `schema.prisma`, such as the `CHECK` constraints, the unique index on `lower(email)`, the partial outbox index and the identity starting at 1001. They must be added to the migration SQL.
+The [Prisma migrations](../../backend/prisma/migrations/) create and evolve the database. Their SQL defines the `CHECK` constraints, the unique index on `lower(email)`, the partial outbox index, and the identity columns, including order numbering starting at 1001.
 
 ## Model
 

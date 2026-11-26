@@ -2,7 +2,7 @@
 
 E-commerce prototype with **CQRS** and three databases. There are two user roles, `admin` and shopper (`user`). It is not a marketplace. Categories and products come from [DummyJSON](https://github.com/Ovi/DummyJSON), and the system is in English.
 
-These files are the **specification**. The API, the worker, the front end and the migration script have not been implemented yet. The PostgreSQL schema will be defined in `schema.prisma` and applied through Prisma migrations.
+This directory contains the backend architecture, the data model specifications, and the REST API contract.
 
 ## Files
 
@@ -28,7 +28,7 @@ flowchart LR
     PG -->|outbox| WORKER["Worker"]
     WORKER -->|projection| MONGO[("MongoDB<br/>read views")]
     MONGO -->|queries| API
-    DUMMY["DummyJSON"] --> SCRIPT["Migration script"]
+    DUMMY["DummyJSON"] --> SCRIPT["Catalog import script"]
     SCRIPT -->|admin routes| API
 ```
 
@@ -46,7 +46,7 @@ flowchart LR
 - Purely descriptive product attributes are kept in a single `jsonb` field. DummyJSON data not used in the project, such as reviews, shipping and return policies and `meta`, is discarded during import.
 - An order is created as `CONFIRMED` at checkout and does not change afterwards; there is no order management by the administrator.
 - The worker rereads the current state in PostgreSQL. Reprocessing does not depend on the event history.
-- The migration is done by an external script, **through the API**, and does not change existing records.
+- An external script imports the catalog **through the API** and leaves existing records unchanged.
 
 ## Open points
 
