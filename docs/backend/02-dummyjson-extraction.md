@@ -4,7 +4,7 @@
 
 The structure below was checked against the files and code of the [official repository](https://github.com/Ovi/DummyJSON), not against calls to the published API. That copy has 24 categories and 194 products.
 
-The migration will be done by an **external script**, written once the API is ready. The script reads DummyJSON and sends the data to the application, without writing directly to the database.
+The migration is done by an **external script**, `backend/src/scripts/import-dummyjson.ts`. It reads DummyJSON and sends the data to the application through HTTP, without writing directly to the database, and imports nothing from the application code.
 
 ## Sources
 
@@ -124,6 +124,26 @@ Columns:
 ```
 
 `meta` and `availabilityStatus` were discarded.
+
+## Running the migration
+
+The API and, for the catalog to appear, the worker must be running. In `backend/`:
+
+```sh
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='a-secure-password' npm run admin:create   # once
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='a-secure-password' npm run catalog:import
+```
+
+| Variable | Use |
+|---|---|
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Admin account created by `admin:create` and used by the import to log in |
+| `ADMIN_FULL_NAME` | Name of the admin account; defaults to `Administrator` |
+| `CATALOG_API_URL` | API base URL; defaults to `http://localhost:3000` |
+| `DUMMYJSON_URL` | Source base URL; defaults to `https://dummyjson.com` |
+
+The variables can also come from `backend/.env`. `admin:create` validates the input with the same rules as registration and fails, without changing anything, if the e-mail is already registered.
+
+The scripts compile to `dist-scripts/` with `tsc`, so they do not interfere with the `dist/` used by `start:dev`. The import exits with code `1` if the source is invalid, the login fails, the API stops responding or any record is rejected.
 
 ## Migration flow
 

@@ -1,4 +1,5 @@
 dist/
 dist-worker/
+dist-scripts/
 src/database/postgres/generated/
 package-lock.json

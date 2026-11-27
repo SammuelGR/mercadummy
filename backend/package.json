@@ -15,7 +15,9 @@
     "lint": "prisma generate && eslint .",
     "lint:fix": "prisma generate && eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "admin:create": "prisma generate && tsc --outDir dist-scripts && node dist-scripts/scripts/create-admin.js",
+    "catalog:import": "prisma generate && tsc --outDir dist-scripts && node dist-scripts/scripts/import-dummyjson.js"
   },
   "dependencies": {
     "@nestjs/common": "12.6.2",

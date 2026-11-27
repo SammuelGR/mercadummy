@@ -70,6 +70,8 @@ The API and the worker run as independent processes within the same backend code
 | `npm run start:worker:dev` | Worker in watch mode, compiled to `dist-worker/`                 |
 | `npm start`                | API from a build (`npm run build`)                               |
 | `npm run start:worker`     | Worker from the same build                                       |
+| `npm run admin:create`     | Creates an `admin` account; see `02-dummyjson-extraction.md`     |
+| `npm run catalog:import`   | Imports the DummyJSON catalog through the API                    |
 
 In development, the worker compiles to its own directory (`tsconfig.worker.json`), so the two watchers do not delete each other's output.
 

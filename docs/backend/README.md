@@ -47,10 +47,10 @@ flowchart LR
 - An order is created as `CONFIRMED` at checkout and does not change afterwards; there is no order management by the administrator.
 - The worker rereads the current state in PostgreSQL. Reprocessing does not depend on the event history.
 - An external script imports the catalog **through the API** and leaves existing records unchanged.
+- The first `admin` account is created by a backend script (`npm run admin:create`), directly in PostgreSQL; the API has no route for it.
 
 ## Open points
 
-- Define how to create the first `admin` account, which is required to import the catalog.
 - Confirm whether checkout should apply discounts. The current specification charges the full price.
 - Confirm the proposed session and cart lifetimes, stock ranges, and API and worker limits.
 - Known limitation: confirming checkout in two tabs with different idempotency keys can create two orders if stock is sufficient. See [Duplicate purchase](03-redis.md#note-duplicate-purchase).

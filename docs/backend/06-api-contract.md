@@ -328,7 +328,7 @@ Orders of the session user, from most recent to oldest. There is no pagination.
 
 Used by the migration script. They do not form a full product management: there are no routes to edit or delete.
 
-The script calls `POST /auth/login` with an `admin` account and sends the cookie on each call. There is no route to create an `admin`.
+The script calls `POST /auth/login` with an `admin` account and sends the cookie on each call. There is no route to create an `admin`: the account is created with `npm run admin:create` (see `02-dummyjson-extraction.md`).
 
 ### `POST /admin/categories`
 
