@@ -34,13 +34,17 @@ export class MongoModule implements OnModuleInit, OnApplicationShutdown {
   private connectionErrorReported = false;
   private shuttingDown = false;
 
-  constructor(@Inject(MONGODB_CONNECTION) private readonly connection: Connection) {}
+  constructor(@Inject(MONGODB_CONNECTION) private readonly connection: Connection) { }
 
   onModuleInit(): void {
     const url = readMongoUrl();
 
-    this.connection.on('error', () => this.reportUnavailable());
-    this.connection.on('disconnected', () => this.reportUnavailable());
+    this.connection.on('error', () => {
+      this.reportUnavailable();
+    });
+    this.connection.on('disconnected', () => {
+      this.reportUnavailable();
+    });
     this.connection.on('connected', () => {
       if (!this.shuttingDown && this.connectionErrorReported) {
         this.connectionErrorReported = false;
@@ -61,7 +65,9 @@ export class MongoModule implements OnModuleInit, OnApplicationShutdown {
     // Mongoose reconnects an established connection, but does not retry a failed initial connection.
     void this.connection.openUri(url, { bufferCommands: false, serverSelectionTimeoutMS: 5000 }).catch(() => {
       if (!this.shuttingDown) {
-        this.retryTimer = setTimeout(() => this.connect(url), 2000);
+        this.retryTimer = setTimeout(() => {
+          this.connect(url);
+        }, 2000);
       }
     });
   }

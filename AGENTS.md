@@ -48,7 +48,7 @@ Keep frontend and backend source code, dependencies, scripts, and configuration 
 - Prefer direct, readable implementations with clear responsibilities.
 - Introduce shared abstractions when they address concrete requirements.
 - Remove unused code, dead exports, and obsolete implementations.
-- Follow the existing linting and formatting configuration.
+- Follow the existing linting and formatting configuration (ESLint with typescript-eslint and Prettier in `backend/`).
 
 ## Workflow Rules
 

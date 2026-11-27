@@ -6,8 +6,10 @@ if (existsSync('.env')) {
   loadEnvFile();
 }
 
+const postgresUrl = env.POSTGRES_URL?.trim();
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: { path: 'prisma/migrations' },
-  datasource: { url: env.POSTGRES_URL?.trim() || undefined },
+  datasource: { url: postgresUrl === '' ? undefined : postgresUrl },
 });
