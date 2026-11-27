@@ -5,40 +5,47 @@ import { createConnection, mongo } from 'mongoose';
 import type { Connection } from 'mongoose';
 
 export const MONGODB_CONNECTION = Symbol('MONGODB_CONNECTION');
+const MONGODB_URL = Symbol('MONGODB_URL');
+
+const mongoUrlProvider: FactoryProvider<string> = {
+  provide: MONGODB_URL,
+  useFactory: async () => {
+    const configuredUrl = env.MONGODB_URL?.trim();
+    if (!configuredUrl) {
+      throw new Error('MONGODB_URL is required.');
+    }
+
+    let validationClient: mongo.MongoClient;
+    try {
+      // The driver validates standard and SRV connection strings without connecting.
+      validationClient = new mongo.MongoClient(configuredUrl);
+    } catch {
+      throw new Error('MONGODB_URL must be a valid mongodb:// or mongodb+srv:// connection URL.');
+    }
+    await validationClient.close();
+
+    return configuredUrl;
+  },
+};
 
 const mongoConnectionProvider: FactoryProvider<Connection> = {
   provide: MONGODB_CONNECTION,
   useFactory: () => createConnection(),
 };
 
-function readMongoUrl(): string {
-  const configuredUrl = env.MONGODB_URL?.trim();
-  if (!configuredUrl) {
-    throw new Error('MONGODB_URL is required.');
-  }
-
-  try {
-    // The driver validates standard and SRV connection strings without connecting.
-    new mongo.MongoClient(configuredUrl);
-  } catch {
-    throw new Error('MONGODB_URL must be a valid mongodb:// or mongodb+srv:// connection URL.');
-  }
-
-  return configuredUrl;
-}
-
-@Module({ providers: [mongoConnectionProvider], exports: [MONGODB_CONNECTION] })
+@Module({ providers: [mongoUrlProvider, mongoConnectionProvider], exports: [MONGODB_CONNECTION] })
 export class MongoModule implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(MongoModule.name);
   private retryTimer?: ReturnType<typeof setTimeout>;
   private connectionErrorReported = false;
   private shuttingDown = false;
 
-  constructor(@Inject(MONGODB_CONNECTION) private readonly connection: Connection) { }
+  constructor(
+    @Inject(MONGODB_URL) private readonly url: string,
+    @Inject(MONGODB_CONNECTION) private readonly connection: Connection,
+  ) {}
 
   onModuleInit(): void {
-    const url = readMongoUrl();
-
     this.connection.on('error', () => {
       this.reportUnavailable();
     });
@@ -52,7 +59,7 @@ export class MongoModule implements OnModuleInit, OnApplicationShutdown {
       }
     });
 
-    this.connect(url);
+    this.connect();
   }
 
   async onApplicationShutdown(): Promise<void> {
@@ -61,12 +68,12 @@ export class MongoModule implements OnModuleInit, OnApplicationShutdown {
     await this.connection.destroy();
   }
 
-  private connect(url: string): void {
+  private connect(): void {
     // Mongoose reconnects an established connection, but does not retry a failed initial connection.
-    void this.connection.openUri(url, { bufferCommands: false, serverSelectionTimeoutMS: 5000 }).catch(() => {
+    void this.connection.openUri(this.url, { bufferCommands: false, serverSelectionTimeoutMS: 5000 }).catch(() => {
       if (!this.shuttingDown) {
         this.retryTimer = setTimeout(() => {
-          this.connect(url);
+          this.connect();
         }, 2000);
       }
     });
