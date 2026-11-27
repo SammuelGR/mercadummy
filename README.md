@@ -13,3 +13,14 @@ npm install
 npx prisma migrate deploy
 npm run start:dev
 ```
+
+Validation:
+
+```bash
+npm run typecheck
+npm run lint
+npm run format:check
+npm run build
+```
+
+`npm run lint:fix` and `npm run format` apply automatic fixes.

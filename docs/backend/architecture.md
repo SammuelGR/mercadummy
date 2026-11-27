@@ -2,15 +2,17 @@
 
 ## Stack
 
-| Technology   | Responsibility                   |
-| ------------ | -------------------------------- |
-| Node.js      | Runtime                          |
-| TypeScript   | Programming language             |
-| NestJS       | Backend framework                |
-| @nestjs/cqrs | Command and query handling       |
-| Prisma       | PostgreSQL access and migrations |
-| Mongoose     | MongoDB access and schemas       |
-| node-redis   | Redis access                     |
+| Technology       | Responsibility                         |
+| ---------------- | -------------------------------------- |
+| Node.js          | Runtime                                |
+| TypeScript       | Programming language                   |
+| NestJS           | Backend framework                      |
+| @nestjs/cqrs     | Command and query handling             |
+| Prisma           | PostgreSQL access and migrations       |
+| Mongoose         | MongoDB access and schemas             |
+| node-redis       | Redis access                           |
+| class-validator  | DTO validation, with class-transformer |
+| ESLint, Prettier | Linting and formatting                 |
 
 ## Architectural Overview
 
@@ -38,6 +40,7 @@ backend/
 │   ├── worker.ts
 │   ├── rebuild.ts
 │   ├── app.module.ts
+│   ├── common/
 │   ├── database/
 │   │   ├── postgres/
 │   │   ├── mongodb/
@@ -73,6 +76,20 @@ The worker and the rebuild process reuse the projection logic defined in `projec
 | `orders`  | Checkout and order history                     |
 
 Each module encapsulates its own functionality and dependencies through NestJS modules and providers.
+
+### Shared HTTP Components
+
+`common/` holds the HTTP concerns applied to every route through a global `CommonModule`:
+
+| Component            | Responsibility                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| `ApiException`       | Error carrying the `code` and `message` body defined in the API contract                  |
+| `ApiExceptionFilter` | Converts every error to the contract format; database connection failures become `503`    |
+| Validation pipe      | `class-validator` DTO validation; rejects unexpected fields with `400 VALIDATION_ERROR`   |
+| `OriginGuard`        | Rejects writes whose `Origin` differs from `FRONTEND_ORIGIN` with `403 INVALID_ORIGIN`    |
+| `HTTP_CONFIG`        | Validated `FRONTEND_ORIGIN` and `COOKIE_SECURE` settings, also used for CORS in `main.ts` |
+
+Detection of connection failures for each database lives next to its client, under `database/`.
 
 ### Module Organization
 
@@ -259,6 +276,15 @@ The worker and the rebuild process must reuse the same transformation logic and 
 Database connections and environment-specific settings are provided through environment variables.
 
 Document required variables in `backend/.env.example`.
+
+| Variable          | Use                                                                    |
+| ----------------- | ---------------------------------------------------------------------- |
+| `PORT`            | HTTP port; defaults to `3000`                                          |
+| `FRONTEND_ORIGIN` | Exact front-end origin for CORS and the `Origin` check, without a path |
+| `COOKIE_SECURE`   | `Secure` attribute of the session cookie; defaults to `true`           |
+| `POSTGRES_URL`    | PostgreSQL connection URL                                              |
+| `MONGODB_URL`     | MongoDB connection URL                                                 |
+| `REDIS_URL`       | Redis connection URL                                                   |
 
 Database connections support local installations, containers, and remote database services.
 

@@ -59,7 +59,7 @@ Cookie, CORS and `Origin` check details are in `03-redis.md`.
 
 | Extra field | When it appears |
 |---|---|
-| `fields[]` (`field`, `message`) | `VALIDATION_ERROR` |
+| `fields[]` (`field`, `message`) | `VALIDATION_ERROR` caused by the body; one entry per invalid field |
 | `items[]` (`productId`, `requested`, `available`) | `INSUFFICIENT_STOCK` and `PRODUCT_UNAVAILABLE` |
 | `existingId` | `CATEGORY_ALREADY_EXISTS` and `PRODUCT_ALREADY_EXISTS` |
 
@@ -70,6 +70,7 @@ Cookie, CORS and `Origin` check details are in `03-redis.md`.
 | 401 | `INVALID_CREDENTIALS` | wrong e-mail or password |
 | 403 | `FORBIDDEN` | the role does not allow the operation |
 | 403 | `INVALID_ORIGIN` | origin not allowed on a write |
+| 404 | `NOT_FOUND` | the route does not exist |
 | 404 | `PRODUCT_NOT_FOUND` | product missing or inactive |
 | 404 | `CART_ITEM_NOT_FOUND` | item is not in the cart |
 | 409 | `EMAIL_ALREADY_IN_USE` | e-mail already registered |

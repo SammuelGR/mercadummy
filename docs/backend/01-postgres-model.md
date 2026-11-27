@@ -122,7 +122,7 @@ System users: administrator and shopper.
 | `id` | `uuid` | no | `gen_random_uuid()` | Identifier |
 | `full_name` | `varchar(150)` | no | | Full name |
 | `email` | `varchar(254)` | no | | Login e-mail |
-| `password_hash` | `varchar(255)` | no | | Password hash |
+| `password_hash` | `varchar(255)` | no | | Password hash; see below |
 | `role` | `user_role` | no | `'user'` | Role |
 | `created_at` | `timestamptz` | no | `now()` | Creation |
 | `updated_at` | `timestamptz` | no | `now()` | Last change |
@@ -131,6 +131,10 @@ System users: administrator and shopper.
 |---|---|
 | `users_pkey` | `PRIMARY KEY (id)` |
 | `users_email_uq` | unique index on `lower(email)` |
+
+`email` is stored in lowercase. Login looks it up with `lower(email) = lower($1)`, which uses `users_email_uq`.
+
+`password_hash` uses scrypt from `node:crypto` (N = 2^15, r = 8, p = 3, 16-byte salt, 64-byte key) in the format `scrypt$N$r$p$salt$key`, with salt and key in `base64url`. Storing the parameters allows changing them later without invalidating existing hashes.
 
 ### categories
 
