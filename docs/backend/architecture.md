@@ -234,7 +234,7 @@ Redis cart cleanup occurs after the PostgreSQL transaction commits.
 
 ## Transactional Outbox
 
-Business data and corresponding outbox events are persisted within the same PostgreSQL transaction.
+Business data and corresponding outbox events are persisted within the same PostgreSQL transaction. Command handlers write events with `appendOutboxEvent` (`database/postgres/outbox.ts`), passing the transaction client that writes the record.
 
 The Outbox Worker runs independently from the API and processes pending events asynchronously.
 

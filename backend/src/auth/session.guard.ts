@@ -2,6 +2,7 @@ import { createParamDecorator, HttpStatus, Injectable } from '@nestjs/common';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
 import { ApiException } from '../common/api-exception.js';
+import { UserRole } from '../database/postgres/generated/enums.js';
 import { SessionsRedisRepository } from './repositories/sessions-redis.repository.js';
 import { readSessionId } from './session.js';
 import type { AuthenticatedSession } from './session.js';
@@ -25,6 +26,23 @@ export class SessionGuard implements CanActivate {
     }
 
     request.authenticatedSession = { sessionId, session };
+    return true;
+  }
+}
+
+/** Requires the `admin` role. Must run after `SessionGuard`: `@UseGuards(SessionGuard, AdminGuard)`. */
+@Injectable()
+export class AdminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const { authenticatedSession } = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    if (authenticatedSession === undefined) {
+      throw new Error('AdminGuard requires SessionGuard.');
+    }
+
+    if (authenticatedSession.session.role !== UserRole.admin) {
+      throw new ApiException(HttpStatus.FORBIDDEN, { code: 'FORBIDDEN', message: 'Operation not allowed' });
+    }
+
     return true;
   }
 }
