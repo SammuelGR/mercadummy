@@ -1,0 +1,40 @@
+{
+  "name": "mercadummy-frontend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && npm run typecheck",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.108.4",
+    "@tanstack/react-router": "1.170.46",
+    "clsx": "2.1.1",
+    "i18next": "27.2.10",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "18.0.3",
+    "tailwind-merge": "3.7.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@tanstack/router-plugin": "1.169.0",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "oxlint": "1.95.0",
+    "prettier": "3.10.1",
+    "tailwindcss": "4.3.5",
+    "typescript": "7.0.2",
+    "vite": "8.4.0"
+  }
+}

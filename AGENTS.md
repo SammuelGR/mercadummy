@@ -12,6 +12,8 @@ The project includes product browsing, authentication, shopping cart management,
 
 ### Frontend
 
+- [Architecture](docs/frontend/architecture.md): frontend stack, source organization, routing, state, and API integration.
+- [Conventions](docs/frontend/conventions.md): testing, TypeScript, React, imports, linting, formatting, and styling rules.
 - [Screens](docs/frontend/screens.md): screen specifications, navigation, and expected user interactions.
 
 ### Backend
@@ -48,7 +50,7 @@ Keep frontend and backend source code, dependencies, scripts, and configuration 
 - Prefer direct, readable implementations with clear responsibilities.
 - Introduce shared abstractions when they address concrete requirements.
 - Remove unused code, dead exports, and obsolete implementations.
-- Follow the existing linting and formatting configuration (ESLint with typescript-eslint and Prettier in `backend/`).
+- Use Oxlint in `frontend/` and ESLint with typescript-eslint in `backend/`. Format each application with its own Prettier configuration. Run `npm run lint` and `npm run format:check` from each affected application directory.
 
 ## Workflow Rules
 
