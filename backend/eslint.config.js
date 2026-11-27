@@ -4,7 +4,7 @@ import prettierConfig from 'eslint-config-prettier/flat';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['dist/', 'src/database/postgres/generated/'] },
+  { ignores: ['dist/', 'dist-worker/', 'src/database/postgres/generated/'] },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,
