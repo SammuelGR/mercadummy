@@ -14,6 +14,7 @@ The project includes product browsing, authentication, shopping cart management,
 
 - [Architecture](docs/frontend/architecture.md): frontend stack, source organization, routing, state, and API integration.
 - [Conventions](docs/frontend/conventions.md): testing, TypeScript, React, imports, linting, formatting, and styling rules.
+- [Design](docs/frontend/design.md): visual direction and reference values for color, typography, spacing, and component styling.
 - [Screens](docs/frontend/screens.md): screen specifications, navigation, and expected user interactions.
 
 ### Backend
