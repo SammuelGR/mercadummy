@@ -45,12 +45,12 @@ E-mail, password and password hash are not stored.
 | Name | `sid` |
 | Content | only the `sessionId` |
 | `HttpOnly` | yes |
-| `Secure` | yes; may be turned off only in the local environment without HTTPS |
+| `Secure` | yes; may be turned off only in the local environment without HTTPS, with `COOKIE_SECURE=false` |
 | `SameSite` | `Lax` |
 | `Path` | `/` |
 | `Max-Age` | `86400` |
 
-- The front end sends requests with `credentials: 'include'`. For CORS, the API returns the exact front-end origin (do not use `*`) and `Access-Control-Allow-Credentials: true`.
+- The front end sends requests with `credentials: 'include'`. For CORS, the API returns the exact front-end origin, configured in `FRONTEND_ORIGIN` (do not use `*`) and `Access-Control-Allow-Credentials: true`.
 - On write operations, the API rejects an `Origin` header different from the expected one. Requests without `Origin`, such as those from the migration script, are accepted and still require each route's authentication.
 - `SameSite=Lax` assumes the front end and the API are on the same *site*. If they are deployed on different sites, the cookie must be revisited.
 
