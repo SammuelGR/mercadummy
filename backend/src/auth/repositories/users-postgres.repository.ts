@@ -7,6 +7,8 @@ export interface NewUser {
   fullName: string;
   email: string;
   passwordHash: string;
+  /** Defaults to `user`. Only the `admin:create` script creates administrators. */
+  role?: UserRole;
 }
 
 export interface UserAccount {
@@ -30,7 +32,7 @@ interface UserCredentialsRow {
 export class UsersPostgresRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  /** Creates a user with the `user` role, or returns null when the e-mail is already registered. */
+  /** Creates a user, or returns null when the e-mail is already registered. */
   async create(user: NewUser): Promise<UserAccount | null> {
     try {
       return await this.prisma.user.create({

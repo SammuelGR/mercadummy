@@ -181,7 +181,7 @@ In addition to the automatic index on `_id`:
 | `categories` | `slug_unique` | `{ slug: 1 }`, unique | no repeated slug |
 | `orders` | `by_user` | `{ userId: 1, createdAt: -1, _id: -1 }` | user history |
 
-Index definitions live in **a single place in the code**. The application creates them at startup, and the rebuild uses the same definition.
+Index definitions live in **a single place in the code**: the view schemas in `backend/src/database/mongodb/schemas/`. The worker creates them at startup, before processing events, and the rebuild uses the same definition.
 
 ## Queries per screen
 
@@ -257,7 +257,8 @@ WHERE id = ANY($1::uuid[]);
 
 ```sql
 -- load-product
-SELECT p.id, p.title, p.thumbnail, p.price, p.discount_percentage, p.stock,
+SELECT p.id, p.title, p.thumbnail, p.price::text AS price,
+       p.discount_percentage::text AS discount_percentage, p.stock,
        p.details, p.is_active, p.created_at, p.version,
        c.id AS category_id, c.slug AS category_slug, c.name AS category_name
 FROM products p
@@ -267,8 +268,8 @@ WHERE p.id = ANY($1::uuid[]);
 
 ```sql
 -- load-order
-SELECT o.id, o.order_number, o.user_id, o.status, o.created_at,
-       o.total_quantity, o.total, o.version,
+SELECT o.id, o.order_number, o.user_id, o.status::text AS status, o.created_at,
+       o.total_quantity, o.total::text AS total, o.version,
        json_agg(json_build_object(
            'productId', i.product_id,
            'title',     i.title,
@@ -282,7 +283,7 @@ WHERE o.id = ANY($1::uuid[])
 GROUP BY o.id;
 ```
 
-Item prices are returned as text so they do not pass through a floating-point number before becoming `Decimal128`.
+Prices, totals and the discount percentage are returned as text so they do not pass through a floating-point number before becoming `Decimal128` or being rounded.
 
 ### Writing to MongoDB
 
@@ -351,7 +352,8 @@ UPDATE outbox_events SET processed_at = now(), last_error = NULL WHERE id = $1;
 UPDATE outbox_events SET attempts = attempts + 1, last_error = $2 WHERE id = $1;
 ```
 
-- The limit of 10 attempts and the batch of 50 are proposed values. Wait for an interval after a failed cycle, so a short MongoDB outage does not exhaust the attempts in a row.
+- The limit of 10 attempts is fixed, since `retry-failed` and the monitoring query depend on it. The batch size (default 50) and the waits are configured through `WORKER_*` variables; see `architecture.md`.
+- After a failed cycle, the worker waits `WORKER_RETRY_DELAY_MS`, so a short MongoDB outage does not exhaust the attempts in a row. While MongoDB is disconnected, it skips cycles without touching the events. A MongoDB connection failure during a batch aborts the whole transaction instead of counting an attempt.
 - A PostgreSQL error aborts the batch transaction. In that case, `ROLLBACK` and try again in a later cycle. Events already applied to MongoDB will be processed again, which is safe.
 - An event that reached the limit stays pending and must be handled as described in the reprocessing document.
 - Ordering by `id` does not guarantee transaction commit order. Rereading the current state and the version make this acceptable.

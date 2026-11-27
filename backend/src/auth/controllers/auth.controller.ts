@@ -1,17 +1,17 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import type { Request, Response } from 'express';
-import { HTTP_CONFIG } from '../common/http-config.js';
-import type { HttpConfig } from '../common/http-config.js';
-import { LoginDto, RegisterDto } from './auth.dto.js';
-import type { AuthUserResponse } from './auth.dto.js';
-import { LogInUserCommand } from './commands/log-in-user.js';
-import { LogOutUserCommand } from './commands/log-out-user.js';
-import { RegisterUserCommand } from './commands/register-user.js';
-import { GetCurrentUserQuery } from './queries/get-current-user.js';
-import { readSessionId, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, sessionCookieOptions } from './session.js';
-import type { AuthenticatedSession, StartedSession } from './session.js';
-import { CurrentSession, SessionGuard } from './session.guard.js';
+import { HTTP_CONFIG } from '../../common/http-config.js';
+import type { HttpConfig } from '../../common/http-config.js';
+import { LoginDto, RegisterDto } from '../dto/auth.dto.js';
+import type { AuthUserResponse } from '../dto/auth.dto.js';
+import { LogInUserCommand } from '../commands/log-in-user.js';
+import { LogOutUserCommand } from '../commands/log-out-user.js';
+import { RegisterUserCommand } from '../commands/register-user.js';
+import { GetCurrentUserQuery } from '../queries/get-current-user.js';
+import { readSessionId, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, sessionCookieOptions } from '../session.js';
+import type { AuthenticatedSession, StartedSession } from '../session.js';
+import { CurrentSession, SessionGuard } from '../session.guard.js';
 
 @Controller('auth')
 export class AuthController {

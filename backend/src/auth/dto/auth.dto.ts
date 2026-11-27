@@ -1,5 +1,5 @@
 import { IsEmail, IsNotEmpty, IsString, Length, Matches, MaxLength } from 'class-validator';
-import type { UserRole } from '../database/postgres/generated/enums.js';
+import type { UserRole } from '../../database/postgres/generated/enums.js';
 
 export class RegisterDto {
   @IsString()

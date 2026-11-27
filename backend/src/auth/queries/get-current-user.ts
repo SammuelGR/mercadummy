@@ -1,6 +1,6 @@
 import { Query, QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import type { AuthUserResponse } from '../auth.dto.js';
+import type { AuthUserResponse } from '../dto/auth.dto.js';
 import type { Session } from '../session.js';
 
 /** Returns the user stored in the session, which `SessionGuard` has already read from Redis. */

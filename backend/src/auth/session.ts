@@ -1,6 +1,6 @@
 import type { CookieOptions, Request } from 'express';
 import type { UserRole } from '../database/postgres/generated/enums.js';
-import type { AuthUserResponse } from './auth.dto.js';
+import type { AuthUserResponse } from './dto/auth.dto.js';
 
 export interface Session {
   userId: string;

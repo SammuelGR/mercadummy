@@ -1,6 +1,6 @@
 # API Contract
 
-REST routes of the API (NestJS, CQRS). The API is **not implemented** yet; this is the contract to follow.
+REST routes of the API (NestJS, CQRS). This is the contract the implementation follows; routes are added module by module.
 
 The paths below belong to the API and should not be confused with the front-end screen routes.
 
@@ -328,7 +328,7 @@ Orders of the session user, from most recent to oldest. There is no pagination.
 
 Used by the migration script. They do not form a full product management: there are no routes to edit or delete.
 
-The script calls `POST /auth/login` with an `admin` account and sends the cookie on each call. There is no route to create an `admin`.
+The script calls `POST /auth/login` with an `admin` account and sends the cookie on each call. There is no route to create an `admin`: the account is created with `npm run admin:create` (see `02-dummyjson-extraction.md`).
 
 ### `POST /admin/categories`
 

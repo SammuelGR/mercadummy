@@ -62,7 +62,18 @@ backend/
 | `worker.ts`  | Start the Outbox Worker                |
 | `rebuild.ts` | Execute the projection rebuild process |
 
-The API and the worker run as independent processes within the same backend codebase.
+The API and the worker run as independent processes within the same backend codebase. The worker is a NestJS application context without an HTTP server (`OutboxWorkerModule`).
+
+| Script                     | Process                                                          |
+| -------------------------- | ---------------------------------------------------------------- |
+| `npm run start:dev`        | API in watch mode, compiled to `dist/`                           |
+| `npm run start:worker:dev` | Worker in watch mode, compiled to `dist-worker/`                 |
+| `npm start`                | API from a build (`npm run build`)                               |
+| `npm run start:worker`     | Worker from the same build                                       |
+| `npm run admin:create`     | Creates an `admin` account; see `02-dummyjson-extraction.md`     |
+| `npm run catalog:import`   | Imports the DummyJSON catalog through the API                    |
+
+In development, the worker compiles to its own directory (`tsconfig.worker.json`), so the two watchers do not delete each other's output.
 
 The worker and the rebuild process reuse the projection logic defined in `projections/`.
 
@@ -102,25 +113,29 @@ The following example illustrates the organization of an `orders` module. The fi
 ```text
 orders/
 ├── orders.module.ts
-├── orders.controller.ts
-├── orders.dto.ts
 ├── order-totals.ts                  # Example of a pure function
 ├── order-totals.spec.ts             # Example of a unit test
+├── controllers/
+│   └── orders.controller.ts
+├── dto/
+│   └── orders.dto.ts
+├── mappers/
+│   └── order-responses.mapper.ts    # View or record → response
 ├── commands/
 │   └── place-order.ts               # Command and handler
 ├── queries/
 │   └── list-my-orders.ts            # Query and handler
-├── repositories/
-│   ├── orders-postgres.repository.ts
-│   └── orders-mongodb.repository.ts
-└── schemas/
-    └── order.schema.ts
+└── repositories/
+    ├── orders-postgres.repository.ts
+    └── orders-mongodb.repository.ts
 ```
 
+- Keep controllers under `controllers/`, one per group of routes.
+- Keep DTOs under `dto/` and conversions between representations under `mappers/`, as `*.mapper.ts`.
 - Keep commands under `commands/`, with each command and its handler in the same file.
 - Keep queries under `queries/`, with each query and its handler in the same file.
 - Keep repositories under `repositories/`.
-- Keep Mongoose schemas under `schemas/`.
+- Keep the Mongoose schemas of the read views in `database/mongodb/schemas/`, shared by the projections and the modules that query them.
 - Keep module-specific tests close to the code they validate.
 - Introduce additional files and directories according to the module's actual requirements.
 
@@ -150,7 +165,8 @@ The following components represent the architectural building blocks of the back
 - Prefer pure functions for self-contained calculations and transformations that depend exclusively on their inputs.
 - Repositories are concrete implementations specific to their persistence responsibilities.
 - PostgreSQL models are defined in `prisma/schema.prisma`.
-- MongoDB schemas are defined with Mongoose within their respective modules.
+- MongoDB schemas are defined with Mongoose in `database/mongodb/schemas/`, one file per view, including its indexes.
+- The view models are registered once per connection by `ViewModelsModule` (`database/mongodb/view-models.module.ts`); repositories inject them instead of calling `connection.model()`, which throws when a name is registered twice.
 - Redis data structures are represented through TypeScript types and repository implementations.
 - Authentication and authorization guards belong to the `auth` module and are reused by controllers that require access control.
 - Background processing is centralized in `projections/`, which owns the Outbox Worker and projection rebuilding logic.
@@ -234,7 +250,7 @@ Redis cart cleanup occurs after the PostgreSQL transaction commits.
 
 ## Transactional Outbox
 
-Business data and corresponding outbox events are persisted within the same PostgreSQL transaction.
+Business data and corresponding outbox events are persisted within the same PostgreSQL transaction. Command handlers write events with `appendOutboxEvent` (`database/postgres/outbox.ts`), passing the transaction client that writes the record.
 
 The Outbox Worker runs independently from the API and processes pending events asynchronously.
 
@@ -261,6 +277,13 @@ The initial architecture uses a single worker process.
 
 The `src/projections/` directory contains the shared logic responsible for synchronizing PostgreSQL data with MongoDB read models.
 
+| Directory        | Responsibility                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `projector/`     | Loads the current PostgreSQL state, maps it to view documents and writes them to MongoDB |
+| `outbox-worker/` | Consumes `outbox_events` in batches and calls the projector for each event               |
+
+The projector does not depend on the worker, so the rebuild can reuse it.
+
 Its responsibilities include:
 
 - Reading authoritative data from PostgreSQL.
@@ -285,6 +308,14 @@ Document required variables in `backend/.env.example`.
 | `POSTGRES_URL`    | PostgreSQL connection URL                                              |
 | `MONGODB_URL`     | MongoDB connection URL                                                 |
 | `REDIS_URL`       | Redis connection URL                                                   |
+
+The worker uses only `POSTGRES_URL` and `MONGODB_URL`, plus:
+
+| Variable                  | Use                                                                        |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `WORKER_POLL_INTERVAL_MS` | Wait when no events remain or a rebuild holds the lock; defaults to `1000` |
+| `WORKER_RETRY_DELAY_MS`   | Wait after a failed cycle; defaults to `5000`                              |
+| `WORKER_BATCH_SIZE`       | Events per batch transaction, 1 to 500; defaults to `50`                   |
 
 Database connections support local installations, containers, and remote database services.
 

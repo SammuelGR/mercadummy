@@ -2,3 +2,5 @@
 node_modules/
 dist/
 /src/database/postgres/generated/
+dist-worker/
+dist-scripts/
