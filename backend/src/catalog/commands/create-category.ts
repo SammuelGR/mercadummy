@@ -5,8 +5,8 @@ import { ApiException } from '../../common/api-exception.js';
 import { PrismaClient } from '../../database/postgres/generated/client.js';
 import { appendOutboxEvent } from '../../database/postgres/outbox.js';
 import { isUniqueConstraintViolation } from '../../database/postgres/postgres-errors.js';
-import type { CategoryResponse } from '../catalog-admin.dto.js';
-import { CategoriesPostgresRepository } from '../repositories/categories-postgres.repository.js';
+import type { CategoryResponse } from '../dto/catalog.dto.js';
+import { CategoriesPostgresRepository } from '../repositories/postgres/categories-postgres.repository.js';
 
 /** Creates a category. An existing `slug` is reported with its id and left unchanged. */
 export class CreateCategoryCommand extends Command<CategoryResponse> {

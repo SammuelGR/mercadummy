@@ -1,21 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Connection, Model } from 'mongoose';
-import { MONGODB_CONNECTION } from '../../../../database/mongodb/mongo.module.js';
-import {
-  CATEGORY_VIEW_COLLECTION,
-  categoryViewSchema,
-} from '../../../../database/mongodb/schemas/category-view.schema.js';
+import type { Model } from 'mongoose';
 import type { CategoryView } from '../../../../database/mongodb/schemas/category-view.schema.js';
+import { CATEGORY_VIEW_MODEL } from '../../../../database/mongodb/view-models.module.js';
 import { saveView } from './save-view.js';
 
 /** Writes the `categories` view. Only the projection processes use it. */
 @Injectable()
 export class CategoryViewsMongoRepository {
-  private readonly model: Model<CategoryView>;
-
-  constructor(@Inject(MONGODB_CONNECTION) connection: Connection) {
-    this.model = connection.model<CategoryView>('CategoryView', categoryViewSchema, CATEGORY_VIEW_COLLECTION);
-  }
+  constructor(@Inject(CATEGORY_VIEW_MODEL) private readonly model: Model<CategoryView>) {}
 
   /** Creates the indexes declared in the schema; existing identical indexes are left as they are. */
   async createIndexes(): Promise<void> {

@@ -1,5 +1,5 @@
-import type { Prisma } from '../database/postgres/generated/client.js';
-import type { ProductDetailsDto } from './catalog-admin.dto.js';
+import type { Prisma } from '../../database/postgres/generated/client.js';
+import type { ProductDetailsDto } from '../dto/catalog-admin.dto.js';
 
 /** Converts validated details into the `products.details` object, leaving out the keys that were not sent. */
 export function toProductDetails(dto: ProductDetailsDto): Prisma.InputJsonObject {

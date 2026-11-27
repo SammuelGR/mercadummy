@@ -1,11 +1,12 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { AdminGuard, SessionGuard } from '../auth/session.guard.js';
-import { CreateCategoryDto, CreateProductDto } from './catalog-admin.dto.js';
-import type { CategoryResponse, CreatedProductResponse } from './catalog-admin.dto.js';
-import { CreateCategoryCommand } from './commands/create-category.js';
-import { CreateProductCommand } from './commands/create-product.js';
-import { toProductDetails } from './product-details.js';
+import { AdminGuard, SessionGuard } from '../../auth/session.guard.js';
+import { CreateCategoryDto, CreateProductDto } from '../dto/catalog-admin.dto.js';
+import type { CreatedProductResponse } from '../dto/catalog-admin.dto.js';
+import type { CategoryResponse } from '../dto/catalog.dto.js';
+import { CreateCategoryCommand } from '../commands/create-category.js';
+import { CreateProductCommand } from '../commands/create-product.js';
+import { toProductDetails } from '../mappers/product-details.mapper.js';
 
 @Controller('admin')
 @UseGuards(SessionGuard, AdminGuard)

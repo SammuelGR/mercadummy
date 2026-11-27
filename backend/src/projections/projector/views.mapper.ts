@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import type { CategoryView } from '../../database/mongodb/schemas/category-view.schema.js';
 import type { OrderView } from '../../database/mongodb/schemas/order-view.schema.js';
+import { normalizeSearchText } from '../../database/mongodb/schemas/product-view.schema.js';
 import type {
   AvailabilityStatus,
   ProductSpecification,
@@ -50,11 +51,6 @@ export interface OrderRow {
   total: string;
   version: number;
   items: OrderItemRow[];
-}
-
-/** Removes accents and lowercases; search terms must go through the same function. */
-export function normalizeSearchText(text: string): string {
-  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 
 /** Proposed rule: 0 is out of stock, 1 to 7 is low stock, 8 or more is in stock. */

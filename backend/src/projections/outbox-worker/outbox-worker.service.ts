@@ -5,7 +5,7 @@ import type { Connection } from 'mongoose';
 import { isMongoUnavailableError } from '../../database/mongodb/mongo-errors.js';
 import { MONGODB_CONNECTION } from '../../database/mongodb/mongo.module.js';
 import { Prisma, PrismaClient } from '../../database/postgres/generated/client.js';
-import { ProjectorService } from '../projector/services/projector.service.js';
+import { ProjectorService } from '../projector/projector.service.js';
 import { OutboxPostgresRepository } from './repositories/outbox-postgres.repository.js';
 import type { PendingOutboxEvent } from './repositories/outbox-postgres.repository.js';
 import { WORKER_CONFIG } from './worker-config.js';

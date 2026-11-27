@@ -111,10 +111,14 @@ The following example illustrates the organization of an `orders` module. The fi
 ```text
 orders/
 ├── orders.module.ts
-├── orders.controller.ts
-├── orders.dto.ts
 ├── order-totals.ts                  # Example of a pure function
 ├── order-totals.spec.ts             # Example of a unit test
+├── controllers/
+│   └── orders.controller.ts
+├── dto/
+│   └── orders.dto.ts
+├── mappers/
+│   └── order-responses.mapper.ts    # View or record → response
 ├── commands/
 │   └── place-order.ts               # Command and handler
 ├── queries/
@@ -124,6 +128,8 @@ orders/
     └── orders-mongodb.repository.ts
 ```
 
+- Keep controllers under `controllers/`, one per group of routes.
+- Keep DTOs under `dto/` and conversions between representations under `mappers/`, as `*.mapper.ts`.
 - Keep commands under `commands/`, with each command and its handler in the same file.
 - Keep queries under `queries/`, with each query and its handler in the same file.
 - Keep repositories under `repositories/`.
@@ -158,6 +164,7 @@ The following components represent the architectural building blocks of the back
 - Repositories are concrete implementations specific to their persistence responsibilities.
 - PostgreSQL models are defined in `prisma/schema.prisma`.
 - MongoDB schemas are defined with Mongoose in `database/mongodb/schemas/`, one file per view, including its indexes.
+- The view models are registered once per connection by `ViewModelsModule` (`database/mongodb/view-models.module.ts`); repositories inject them instead of calling `connection.model()`, which throws when a name is registered twice.
 - Redis data structures are represented through TypeScript types and repository implementations.
 - Authentication and authorization guards belong to the `auth` module and are reused by controllers that require access control.
 - Background processing is centralized in `projections/`, which owns the Outbox Worker and projection rebuilding logic.

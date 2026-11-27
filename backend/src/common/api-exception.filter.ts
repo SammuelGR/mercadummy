@@ -1,6 +1,7 @@
 import { Catch, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import type { Response } from 'express';
+import { isMongoUnavailableError } from '../database/mongodb/mongo-errors.js';
 import { isPostgresUnavailableError } from '../database/postgres/postgres-errors.js';
 import { isRedisUnavailableError } from '../database/redis/redis-errors.js';
 import { ApiException } from './api-exception.js';
@@ -26,7 +27,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return { status: exception.getStatus(), body: exception.body };
     }
 
-    if (isPostgresUnavailableError(exception) || isRedisUnavailableError(exception)) {
+    if (
+      isPostgresUnavailableError(exception) ||
+      isMongoUnavailableError(exception) ||
+      isRedisUnavailableError(exception)
+    ) {
       this.logger.warn(`A required database is unavailable: ${describe(exception)}`);
       return {
         status: HttpStatus.SERVICE_UNAVAILABLE,

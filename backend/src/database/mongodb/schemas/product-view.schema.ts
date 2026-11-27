@@ -35,6 +35,11 @@ export interface ProductView {
 
 export const PRODUCT_VIEW_COLLECTION = 'products';
 
+/** Builds `titleSearch`: removes accents and lowercases. Search terms must go through the same function. */
+export function normalizeSearchText(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
 const categorySchema = new Schema(
   {
     id: String,

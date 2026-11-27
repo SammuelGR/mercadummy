@@ -1,6 +1,6 @@
 # API Contract
 
-REST routes of the API (NestJS, CQRS). The API is **not implemented** yet; this is the contract to follow.
+REST routes of the API (NestJS, CQRS). This is the contract the implementation follows; routes are added module by module.
 
 The paths below belong to the API and should not be confused with the front-end screen routes.
 

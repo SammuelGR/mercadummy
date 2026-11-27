@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../../../database/postgres/generated/client.js';
-import type { OutboxAggregateType } from '../../../database/postgres/outbox.js';
-import { ProjectionsPostgresRepository } from '../repositories/postgres/projections-postgres.repository.js';
-import { CategoryViewsMongoRepository } from '../repositories/mongo/categories-mongodb.repository.js';
-import { OrderViewsMongoRepository } from '../repositories/mongo/orders-mongodb.repository.js';
-import { ProductViewsMongoRepository } from '../repositories/mongo/products-mongodb.repository.js';
-import { toCategoryView, toOrderView, toProductView } from '../views.mapper.js';
-import type { CategoryRow, OrderRow, ProductRow } from '../views.mapper.js';
+import type { Prisma } from '../../database/postgres/generated/client.js';
+import type { OutboxAggregateType } from '../../database/postgres/outbox.js';
+import { ProjectionsPostgresRepository } from './repositories/postgres/projections-postgres.repository.js';
+import { CategoryViewsMongoRepository } from './repositories/mongo/category-views-mongodb.repository.js';
+import { OrderViewsMongoRepository } from './repositories/mongo/order-views-mongodb.repository.js';
+import { ProductViewsMongoRepository } from './repositories/mongo/product-views-mongodb.repository.js';
+import { toCategoryView, toOrderView, toProductView } from './views.mapper.js';
+import type { CategoryRow, OrderRow, ProductRow } from './views.mapper.js';
 
 /** Current PostgreSQL state of one aggregate; `row` is undefined when the record no longer exists. */
 export type LoadedAggregate =

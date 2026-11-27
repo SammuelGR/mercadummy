@@ -6,7 +6,8 @@ export function isMongoUnavailableError(error: unknown): boolean {
     error instanceof mongo.MongoNetworkError ||
     error instanceof mongo.MongoServerSelectionError ||
     error instanceof mongo.MongoNotConnectedError ||
-    error instanceof MongooseError.MongooseServerSelectionError
+    error instanceof MongooseError.MongooseServerSelectionError ||
+    isBeforeInitialConnectionError(error)
   );
 }
 
@@ -17,4 +18,10 @@ export function isDuplicateIdError(error: unknown): boolean {
   }
   const keyPattern = error.keyPattern as Record<string, unknown> | undefined;
   return keyPattern?._id === 1;
+}
+
+// With `bufferCommands: false`, Mongoose rejects commands sent before the first connection with a plain
+// MongooseError that only its message identifies.
+function isBeforeInitialConnectionError(error: unknown): boolean {
+  return error instanceof MongooseError && error.message.includes('before initial connection is complete');
 }

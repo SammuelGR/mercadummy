@@ -6,10 +6,10 @@ import { PrismaClient } from '../../database/postgres/generated/client.js';
 import type { Prisma } from '../../database/postgres/generated/client.js';
 import { appendOutboxEvent } from '../../database/postgres/outbox.js';
 import { isUniqueConstraintViolation } from '../../database/postgres/postgres-errors.js';
-import type { CreatedProductResponse } from '../catalog-admin.dto.js';
-import { CategoriesPostgresRepository } from '../repositories/categories-postgres.repository.js';
-import { ProductsPostgresRepository } from '../repositories/products-postgres.repository.js';
-import type { NewProduct } from '../repositories/products-postgres.repository.js';
+import type { CreatedProductResponse } from '../dto/catalog-admin.dto.js';
+import { CategoriesPostgresRepository } from '../repositories/postgres/categories-postgres.repository.js';
+import { ProductsPostgresRepository } from '../repositories/postgres/products-postgres.repository.js';
+import type { NewProduct } from '../repositories/postgres/products-postgres.repository.js';
 
 /** Creates an active product. An existing `externalId` is reported with its id and left unchanged. */
 export class CreateProductCommand extends Command<CreatedProductResponse> {

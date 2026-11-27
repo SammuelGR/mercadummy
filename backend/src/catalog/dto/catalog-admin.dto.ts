@@ -140,12 +140,6 @@ export class CreateProductDto {
   details!: ProductDetailsDto;
 }
 
-export interface CategoryResponse {
-  id: string;
-  slug: string;
-  name: string;
-}
-
 export interface CreatedProductResponse {
   id: string;
   externalId: number | null;

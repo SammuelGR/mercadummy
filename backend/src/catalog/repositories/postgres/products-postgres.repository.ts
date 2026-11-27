@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../../database/postgres/generated/client.js';
+import type { Prisma } from '../../../database/postgres/generated/client.js';
 
 export interface NewProduct {
   externalId: number | null;
